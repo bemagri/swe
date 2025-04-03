@@ -33,16 +33,19 @@ def encrypt(threshold: int, ver_keys: list[pymcl.G2], sign_messages: list[str], 
     s: list[pymcl.Fr]  = [eval_polynomial(xi[i], coefficients) for i in range(len(ver_keys))]
     alpha: list[pymcl.Fr] = [pymcl.Fr.random() for _ in range(len(messages))]
     r: pymcl.Fr = pymcl.Fr.random()
-    a: list[pymcl.G2] =  [pymcl.g2 * (r + alpha[i]) for i in range(len(messages))]
-    t: list[pymcl.G1] #= [Hash(sign_messages[i]**alpha[i]) for i in range(length(sign_messages))] 
+    c: pymcl.Fr = pymcl.g2 * r
+    a: list[pymcl.G2] =  [c * alpha[i] for i in range(len(messages))]
+    t: list[pymcl.G1] = [pymcl.G1.hash(sign_messages[i].encode())*alpha[i] for i in range(len(sign_messages))] 
     h: pymcl.G2 =  pymcl.g2 * pymcl.Fr.random()
     c0: pymcl.G2 = (h * r) + (pymcl.g2 * coefficients[0])
     c1: list[pymcl.G2] = [(ver_keys[i] * r) + (pymcl.g2**s[i]) for i in range(len(ver_keys))]
-    c2: list[pymcl.GT] = [pymcl.pairing(t[i], pymcl.g2 * coefficients[0]) + (pymcl.gt ** messages[i]) for i in range(len(messages))]
+    gt: pymcl.GT = pymcl.pairing(pymcl.g1, pymcl.g2)
+    c2: list[pymcl.GT] = [pymcl.pairing(t[i], pymcl.g2 * coefficients[0]) * (gt ** messages[i]) for i in range(len(messages))]
 
     ct = Ciphertext(
         h=h,
-        c=c0,
+        c=c,
+        c0=c0,
         c1=c1,
         c2=c2,
         a=a,
