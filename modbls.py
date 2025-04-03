@@ -4,7 +4,7 @@ See paper https://eprint.iacr.org/2022/433.pdf for details.
 Requires pymcl library for pairing operations, see https://github.com/Jemtaly/pymcl.
 """
 import pymcl
-import hashtofr
+import ecutils
 
 def key_gen() -> tuple[pymcl.Fr, pymcl.G2]:
     """
@@ -48,7 +48,7 @@ def agg_sigs(sigs: list[pymcl.G1], ver_keys: list[pymcl.G2]) -> pymcl.G1:
     :param ver_keys: List of verification keys corresponding to the signatures.
     :return: Aggregated signature.
     """
-    xi = [hashtofr.hash(ver_keys[i]) for i in range(len(ver_keys))]
+    xi = [ecutils.hash_g2_to_fr(ver_keys[i]) for i in range(len(ver_keys))]
     agg_sig = pymcl.g1 - pymcl.g1 # Initialize to neutral element of G1
     for i in range(len(ver_keys)):
         li = compute_li(xi, i)
@@ -68,7 +68,7 @@ def agg_verify(agg_sig: pymcl.G1, messages: list[str], ver_keys: list[pymcl.G2])
     if len(messages) != len(ver_keys):
         raise ValueError("Number of messages must match number of verification keys.")
     
-    xi = [hashtofr.hash(ver_keys[i]) for i in range(len(ver_keys))]
+    xi = [ecutils.hash_g2_to_fr(ver_keys[i]) for i in range(len(ver_keys))]
     lhs = pymcl.pairing(agg_sig, pymcl.g2)
     rhs = pymcl.pairing(pymcl.g1 - pymcl.g1, pymcl.g2 - pymcl.g2) # Initialize to neutral element of GT
     for i in range(len(messages)):
