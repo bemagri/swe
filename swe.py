@@ -17,17 +17,39 @@ class Ciphertext(NamedTuple):
     a: list[pymcl.G2]
     t: list[pymcl.G1]
 
-def encrypt(ver_keys: list[pymcl.G2], sign_messages: list[str], messages: list[pymcl.Fr]) -> Ciphertext:
+def encrypt(threshold: int, ver_keys: list[pymcl.G2], sign_messages: list[str], messages: list[pymcl.Fr]) -> Ciphertext:
     """
     Encrypt a list of messages using signature-based witness encryption (SWE)
     relative to the given verification keys and signing messages.
 
+    :param threshold: Number of signatures required to decrypt.
     :param ver_keys: List of verification keys.
     :param sign_messages: List of messages that need to be signed to allow decryption.
     :param messages: List of messages to encrypt. We require each message to be in [0, 2^msg_lengths) for some msg_lengths for decryption.
     :return: Ciphertext.
     """ 
-    return None
+    coefficients: list[pymcl.Fr] = [pymcl.Fr.random() for _ in range(threshold-1)]
+    xi: list[pymcl.Fr]  # = [Hash(ver_keys[i]) for _ in range(length(ver_keys))]
+    s: list[pymcl.Fr] # = evaluate the polynomial for each xi
+    alpha: list[pymcl.Fr] = [pymcl.Fr.random() for _ in range(length(messages))]
+    r: pymcl.Fr = pymcl.Fr.random()
+    a: list[pymcl.G2] =  [pymcl.g2**(r * alpha[i]) for i in range(length(messages))]
+    t: list[pymcl.G1] #= [Hash(sign_messages[i]**alpha[i]) for i in range(length(sign_messages))] 
+    h: pymcl.G2 = pymcl.G2.random()
+    c0: pymcl.G2 = (h**r) * (pymcl.g2**coefficients[0])
+    c1: list[pymcl.G2] = [(ver_keys[i]**r) * (pymcl.g2**s[i]) for i in range(length(ver_keys))]
+    c2: list[pymcl.GT] = [pymcl.pairing(t[i], pymcl.g2**coefficients[0]) * (pymcl.gt ** messages[i]) for i in range(length(messages))]
+
+    ct = Ciphertext(
+        h=h,
+        c=c0,
+        c1=c1,
+        c2=c2,
+        a=a,
+        t=t
+    )
+
+    return ct
 
 def decrypt(ctxt: Ciphertext, signatures: list[pymcl.G1], ver_keys: list[pymcl.G2], used_vk_indices: list[int], msg_lengths: int) -> list[pymcl.Fr]:
     """
