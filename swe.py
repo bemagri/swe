@@ -30,15 +30,15 @@ def encrypt(threshold: int, ver_keys: list[pymcl.G2], sign_messages: list[str], 
     """ 
     coefficients: list[pymcl.Fr] = [pymcl.Fr.random() for _ in range(threshold-1)]
     xi: list[pymcl.Fr]  #= [pymcl.Fr.Hash Hash(ver_keys[i]) for _ in range(length(ver_keys))]
-    s: list[pymcl.Fr]  = [eval_polynomial(xi[i], coefficients) for i in range(length(ver_keys))]
-    alpha: list[pymcl.Fr] = [pymcl.Fr.random() for _ in range(length(messages))]
+    s: list[pymcl.Fr]  = [eval_polynomial(xi[i], coefficients) for i in range(len(ver_keys))]
+    alpha: list[pymcl.Fr] = [pymcl.Fr.random() for _ in range(len(messages))]
     r: pymcl.Fr = pymcl.Fr.random()
-    a: list[pymcl.G2] =  [pymcl.g2**(r * alpha[i]) for i in range(length(messages))]
+    a: list[pymcl.G2] =  [pymcl.g2 * (r + alpha[i]) for i in range(len(messages))]
     t: list[pymcl.G1] #= [Hash(sign_messages[i]**alpha[i]) for i in range(length(sign_messages))] 
-    h: pymcl.G2 = pymcl.G2.random()
-    c0: pymcl.G2 = (h**r) * (pymcl.g2**coefficients[0])
-    c1: list[pymcl.G2] = [(ver_keys[i]**r) * (pymcl.g2**s[i]) for i in range(length(ver_keys))]
-    c2: list[pymcl.GT] = [pymcl.pairing(t[i], pymcl.g2**coefficients[0]) * (pymcl.gt ** messages[i]) for i in range(length(messages))]
+    h: pymcl.G2 =  pymcl.g2 * pymcl.Fr.random()
+    c0: pymcl.G2 = (h * r) + (pymcl.g2 * coefficients[0])
+    c1: list[pymcl.G2] = [(ver_keys[i] * r) + (pymcl.g2**s[i]) for i in range(len(ver_keys))]
+    c2: list[pymcl.GT] = [pymcl.pairing(t[i], pymcl.g2 * coefficients[0]) + (pymcl.gt ** messages[i]) for i in range(len(messages))]
 
     ct = Ciphertext(
         h=h,
@@ -91,7 +91,7 @@ def main():
     ver_keys = []
 
     # encrypt messages
-    ctxt = encrypt(ver_keys, sign_messages, msgs)
+    ctxt = encrypt(3, ver_keys, sign_messages, msgs)
 
     # set fixed subset of verification keys to use for signing
     used_vk_indices = []
