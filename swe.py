@@ -29,7 +29,7 @@ def encrypt(threshold: int, ver_keys: list[pymcl.G2], sign_messages: list[str], 
     :return: Ciphertext.
     """ 
     coefficients: list[pymcl.Fr] = [pymcl.Fr.random() for _ in range(threshold-1)]
-    xi: list[pymcl.Fr]  #= [pymcl.Fr.Hash Hash(ver_keys[i]) for _ in range(length(ver_keys))]
+    xi: list[pymcl.Fr] = [hash_to_Fr(ver_keys[i]) for _ in range(len(ver_keys))]
     s: list[pymcl.Fr]  = [eval_polynomial(xi[i], coefficients) for i in range(len(ver_keys))]
     alpha: list[pymcl.Fr] = [pymcl.Fr.random() for _ in range(len(messages))]
     r: pymcl.Fr = pymcl.Fr.random()
@@ -38,7 +38,7 @@ def encrypt(threshold: int, ver_keys: list[pymcl.G2], sign_messages: list[str], 
     t: list[pymcl.G1] = [pymcl.G1.hash(sign_messages[i].encode())*alpha[i] for i in range(len(sign_messages))] 
     h: pymcl.G2 =  pymcl.g2 * pymcl.Fr.random()
     c0: pymcl.G2 = (h * r) + (pymcl.g2 * coefficients[0])
-    c1: list[pymcl.G2] = [(ver_keys[i] * r) + (pymcl.g2**s[i]) for i in range(len(ver_keys))]
+    c1: list[pymcl.G2] = [(ver_keys[i] * r) + (pymcl.g2 * s[i]) for i in range(len(ver_keys))]
     gt: pymcl.GT = pymcl.pairing(pymcl.g1, pymcl.g2)
     c2: list[pymcl.GT] = [pymcl.pairing(t[i], pymcl.g2 * coefficients[0]) * (gt ** messages[i]) for i in range(len(messages))]
 
@@ -53,6 +53,23 @@ def encrypt(threshold: int, ver_keys: list[pymcl.G2], sign_messages: list[str], 
     )
 
     return ct
+
+def hash_to_Fr(value: pymcl.G2) -> pymcl.Fr:
+    p = pymcl.Fr.get_modulus()  # get the modulus of the field
+    
+    # Hash the key to bytes
+    h = hashlib.sha256(repr(value).encode()).digest()
+
+    # Convert to integer
+    h_int = int.from_bytes(h, byteorder='big')
+
+    # Map to 1..p-1
+    x_int = (h_int % p) 
+
+    # Convert to Fr
+    x_fr = pymcl.Fr(x_int)
+
+    return x_fr
 
 def eval_polynomial(value: pymcl.Fr, coefficients: list[pymcl.Fr]) -> pymcl.Fr:
     """
@@ -105,7 +122,7 @@ def main():
     # decrypt messages
     dec_msgs = decrypt(ctxt, sigs, ver_keys, used_vk_indices, msg_lengths)
 
-    print(dec_msgs)
+    print(ctxt)
 
 
 if __name__ == "__main__":
