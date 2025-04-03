@@ -29,8 +29,8 @@ def encrypt(threshold: int, ver_keys: list[pymcl.G2], sign_messages: list[str], 
     :return: Ciphertext.
     """ 
     coefficients: list[pymcl.Fr] = [pymcl.Fr.random() for _ in range(threshold-1)]
-    xi: list[pymcl.Fr]  # = [Hash(ver_keys[i]) for _ in range(length(ver_keys))]
-    s: list[pymcl.Fr] # = evaluate the polynomial for each xi
+    xi: list[pymcl.Fr]  #= [pymcl.Fr.Hash Hash(ver_keys[i]) for _ in range(length(ver_keys))]
+    s: list[pymcl.Fr]  = [eval_polynomial(xi[i], coefficients) for i in range(length(ver_keys))]
     alpha: list[pymcl.Fr] = [pymcl.Fr.random() for _ in range(length(messages))]
     r: pymcl.Fr = pymcl.Fr.random()
     a: list[pymcl.G2] =  [pymcl.g2**(r * alpha[i]) for i in range(length(messages))]
@@ -50,6 +50,19 @@ def encrypt(threshold: int, ver_keys: list[pymcl.G2], sign_messages: list[str], 
     )
 
     return ct
+
+def eval_polynomial(value: pymcl.Fr, coefficients: list[pymcl.Fr]) -> pymcl.Fr:
+    """
+    Evaluate a polynomial at a given value.
+
+    :param value: The value to evaluate the polynomial at.
+    :param coefficients: List of coefficients of the polynomial.
+    :return: The evaluated polynomial.
+    """
+    result = pymcl.Fr(0)
+    for i, coeff in enumerate(coefficients):
+        result += coeff * (value ** i)
+    return result
 
 def decrypt(ctxt: Ciphertext, signatures: list[pymcl.G1], ver_keys: list[pymcl.G2], used_vk_indices: list[int], msg_lengths: int) -> list[pymcl.Fr]:
     """
