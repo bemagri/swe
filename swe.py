@@ -5,7 +5,8 @@ Requires pymcl library for pairing operations, see https://github.com/Jemtaly/py
 """
 from typing import NamedTuple
 import pymcl
-
+import hashtofr
+import modbls
 
 class Ciphertext(NamedTuple):
     """Ciphertext of SWE scheme."""
@@ -53,23 +54,6 @@ def encrypt(threshold: int, ver_keys: list[pymcl.G2], sign_messages: list[str], 
     )
 
     return ct
-
-def hash_to_Fr(value: pymcl.G2) -> pymcl.Fr:
-    p = pymcl.Fr.get_modulus()  # get the modulus of the field
-    
-    # Hash the key to bytes
-    h = hashlib.sha256(repr(value).encode()).digest()
-
-    # Convert to integer
-    h_int = int.from_bytes(h, byteorder='big')
-
-    # Map to 1..p-1
-    x_int = (h_int % p) 
-
-    # Convert to Fr
-    x_fr = pymcl.Fr(x_int)
-
-    return x_fr
 
 def eval_polynomial(value: pymcl.Fr, coefficients: list[pymcl.Fr]) -> pymcl.Fr:
     """
