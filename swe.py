@@ -10,6 +10,7 @@ from pprint import pprint
 import pymcl
 import ecutils
 import modbls
+import time
 
 
 class Ciphertext(NamedTuple):
@@ -152,7 +153,16 @@ def main():
 
     # decrypt messages
     setup() # Initialize the baby-step table and setup the global variables
-    dec_msgs = decrypt(ctxt, signatures, ver_keys, used_key_indices, max_value)
+
+    total_time = 0
+    iterations = 500
+    for _ in range(iterations):
+        start_time = time.time()
+        dec_msgs = decrypt(ctxt, signatures, ver_keys, used_key_indices, max_value)
+        total_time += (time.time() - start_time) * 1000  # Convert to milliseconds
+
+    average_time = total_time / iterations
+    print(f"Average decryption time over {iterations} runs: {average_time:.3f} ms")
     print("Decrypted messages:")
     print(dec_msgs)
 
