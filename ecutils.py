@@ -62,9 +62,11 @@ def build_baby_step_table(base: pymcl.GT, max_value: int) -> dict:
 
     m = math.isqrt(max_value) + 1
     baby_steps = {}
+    current = base / base # neutral element
     for j in range(m):
-        current = base ** pymcl.Fr(str(j))
         baby_steps[current] = j
+        current *= base
+    
     return baby_steps
 
 def discrete_log(value: pymcl.GT, base: pymcl.GT, baby_steps: dict, max_value: int) -> pymcl.Fr:
