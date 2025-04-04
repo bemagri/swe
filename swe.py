@@ -41,7 +41,7 @@ def encrypt(
     :param messages: List of messages to encrypt. We require each message to be in [0, 2^msg_lengths) for some msg_lengths for decryption.
     :return: Ciphertext.
     """
-    coefficients: list[pymcl.Fr] = [pymcl.Fr.random() for _ in range(dec_threshold-1)]
+    coefficients: list[pymcl.Fr] = [pymcl.Fr.random() for _ in range(dec_threshold)]
     xi: list[pymcl.Fr] = [ecutils.hash_g2_to_fr(ver_keys[i]) for i in range(len(ver_keys))]
     s: list[pymcl.Fr]  = [ecutils.eval_polynomial(xi[i], coefficients) for i in range(len(ver_keys))]
     alpha: list[pymcl.Fr] = [pymcl.Fr.random() for _ in range(len(messages))]
