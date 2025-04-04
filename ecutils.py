@@ -30,13 +30,17 @@ def pow_fr(base: pymcl.Fr, exponent: int) -> pymcl.Fr:
     Raise a Fr element to an integer power.
     
     :param base: Base Fr element.
-    :param exponent: Exponent (integer).
+    :param exponent: Exponent (non-negative integer).
     :return: Result of base^exponent.
     """
-    result = pymcl.Fr("1")
-    for _ in range(exponent):
-        result *= base
-    return result
+    if exponent == 0:
+        return pymcl.Fr("1")
+    elif exponent % 2 == 0:
+        half = pow_fr(base, exponent // 2)
+        return half * half
+    else:
+        half = pow_fr(base, (exponent - 1) // 2)
+        return half * half * base
 
 def eval_polynomial(value: pymcl.Fr, coefficients: list[pymcl.Fr]) -> pymcl.Fr:
     """
