@@ -1,6 +1,7 @@
 """Provides additional methods missing from pymcl."""
 import pymcl
 import hashlib
+import math
 
 def hash_g2_to_fr(value: pymcl.G2) -> pymcl.Fr:
     """
@@ -58,7 +59,6 @@ def build_baby_step_table(base: pymcl.GT, max_value: int) -> dict:
     :param max_value: The maximum value for the discrete logarithm (e.g. 2**24).
     :return: A dictionary representing the baby-step table.
     """
-    import math
 
     m = math.isqrt(max_value) + 1
     baby_steps = {}
@@ -79,9 +79,6 @@ def discrete_log(value: pymcl.GT, base: pymcl.GT, baby_steps: dict, max_value: i
     :param baby_steps: The precomputed baby-step table.
     :return: The discrete logarithm x such that base * x = value.
     """
-    import math
-
-    modulus = pymcl.r  # Order of the elliptic curve group
 
     # Define the maximum value for the discrete log
     m = math.isqrt(max_value) + 1
