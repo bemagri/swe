@@ -51,7 +51,7 @@ def eval_polynomial(value: pymcl.Fr, coefficients: list[pymcl.Fr]) -> pymcl.Fr:
         result += coeff * (pow_fr(value, i))
     return result
 
-def build_baby_step_table(base: pymcl.GT, max_value: int) -> dict:
+def build_baby_step_table(base: pymcl.GT, max_value: int) -> dict[int]:
     """
     Build the baby-step table for the baby-step-giant-step algorithm.
 

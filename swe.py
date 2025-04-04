@@ -24,16 +24,6 @@ class Ciphertext(NamedTuple):
     a: list[pymcl.G2]
     t: list[pymcl.G1]
 
-# Define global variables to make them accessible to other functions
-BABY_STEPS_TABLE = None
-gt = None
-max_value = None
-
-def setup():
-    global BABY_STEPS_TABLE, gt, max_value
-    gt = pymcl.pairing(pymcl.g1, pymcl.g2)  # generator point of GT
-    max_value = 2**24  # Maximum value for discrete log
-    BABY_STEPS_TABLE = ecutils.build_baby_step_table(gt, max_value)
 
 def encrypt(
     dec_threshold: int,
@@ -77,6 +67,7 @@ def decrypt(
     ver_keys: list[pymcl.G2],
     used_vk_indices: list[int],
     msg_lengths: int,
+    baby_steps_table: dict[int],
 ) -> list[pymcl.Fr]:
     """
     Decrypt a SWE ciphertext.
@@ -102,8 +93,8 @@ def decrypt(
         ctxt.c2[i] * pymcl.pairing(signatures[i], ctxt.a[i]) / pymcl.pairing(ctxt.t[i], c)
         for i in range(len(ctxt.c2))
     ]
-     
-    msg: list[pymcl.Fr] = [ecutils.discrete_log(z[i], gt, BABY_STEPS_TABLE, max_value) for i in range(len(z))]
+    gt = pymcl.pairing(pymcl.g1, pymcl.g2)  # generator point of GT
+    msg: list[pymcl.Fr] = [ecutils.discrete_log(z[i], gt, baby_steps_table, 2**msg_lengths) for i in range(len(z))]
 
     for i in range(len(msg)):
         if msg[i] is None:
@@ -126,8 +117,11 @@ def main():
     msgs = [pymcl.Fr("123"), pymcl.Fr("456"), pymcl.Fr("789"), pymcl.Fr("30000")]
     sign_messages = ["msg1", "msg2", "msg3", "msg4"]
 
+    # Setup
     start_time = timer()
-    setup() # Initialize the baby-step table and setup the global variables
+    
+    gt = pymcl.pairing(pymcl.g1, pymcl.g2)  # generator point of GT
+    baby_steps_table = ecutils.build_baby_step_table(gt, 2**msg_lengths)
 
     # generate signing and verification keys
     modbls_keys = [modbls.key_gen() for _ in range(num_keys)]
@@ -173,7 +167,7 @@ def main():
 
         # decrypt messages
         start_time = timer()
-        dec_msgs = decrypt(ctxt, signatures, ver_keys, used_key_indices, max_value)
+        dec_msgs = decrypt(ctxt, signatures, ver_keys, used_key_indices, msg_lengths, baby_steps_table)
         # print("Decrypted messages:")
         # print(dec_msgs)
         end_time = timer()
