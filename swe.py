@@ -10,7 +10,7 @@ from pprint import pprint
 import pymcl
 import ecutils
 import modbls
-import time
+from time import perf_counter_ns as timer
 
 
 class Ciphertext(NamedTuple):
@@ -118,9 +118,16 @@ def main():
     num_keys = 4
     dec_threshold = 3  # number of keys required to sign messages to decrypt
 
+    total_enc_time = 0
+    total_sig_time = 0
+    total_dec_time = 0
+
     # Set some messages and signing messages
     msgs = [pymcl.Fr("123"), pymcl.Fr("456"), pymcl.Fr("789"), pymcl.Fr("30000")]
     sign_messages = ["msg1", "msg2", "msg3", "msg4"]
+
+    start_time = timer()
+    setup() # Initialize the baby-step table and setup the global variables
 
     # generate signing and verification keys
     modbls_keys = [modbls.key_gen() for _ in range(num_keys)]
@@ -128,43 +135,59 @@ def main():
     sks = list(sks)
     ver_keys = list(ver_keys)
 
-    # encrypt messages
-    ctxt = encrypt(dec_threshold, ver_keys, sign_messages, msgs)
-    print("Ciphertext:")
-    pprint(dict(ctxt._asdict()))
+    end_time = timer()
+    setup_time = (end_time - start_time)
 
-    # sample a random subset of size threshold of keys to use for signing
-    used_key_indices = sorted(random.sample(range(num_keys), dec_threshold))
-    print("Used verification key indices:")
-    print(used_key_indices)
-
-    # every key in used_key_indices signs all messages in sign_messages
-    signatures = []
-    for i in range(len(sign_messages)):
-        sigs = [
-            modbls.sign(sks[used_key_indices[j]], sign_messages[i])
-            for j in range(dec_threshold)
-        ]
-        # aggregate signatures
-        aggregated_signature = modbls.agg_sigs(
-            sigs, [ver_keys[used_key_indices[j]] for j in range(dec_threshold)]
-        )
-        signatures.append(aggregated_signature)
-
-    # decrypt messages
-    setup() # Initialize the baby-step table and setup the global variables
-
-    total_time = 0
     iterations = 500
     for _ in range(iterations):
-        start_time = time.time()
-        dec_msgs = decrypt(ctxt, signatures, ver_keys, used_key_indices, max_value)
-        total_time += (time.time() - start_time) * 1000  # Convert to milliseconds
+        # encrypt messages
+        start_time = timer()
 
-    average_time = total_time / iterations
-    print(f"Average decryption time over {iterations} runs: {average_time:.3f} ms")
-    print("Decrypted messages:")
-    print(dec_msgs)
+        ctxt = encrypt(dec_threshold, ver_keys, sign_messages, msgs)
+        # print("Ciphertext:")
+        # pprint(dict(ctxt._asdict()))
+
+        end_time = timer()
+        total_enc_time += (end_time - start_time)
+
+        # sample a random subset of size threshold of keys to use for signing
+        used_key_indices = sorted(random.sample(range(num_keys), dec_threshold))
+        # print("Used verification key indices:")
+        # print(used_key_indices)
+
+        # every key in used_key_indices signs all messages in sign_messages
+        start_time = timer()
+        signatures = []
+        for i in range(len(sign_messages)):
+            sigs = [
+                modbls.sign(sks[used_key_indices[j]], sign_messages[i])
+                for j in range(dec_threshold)
+            ]
+            # aggregate signatures
+            aggregated_signature = modbls.agg_sigs(
+                sigs, [ver_keys[used_key_indices[j]] for j in range(dec_threshold)]
+            )
+            signatures.append(aggregated_signature)
+        end_time = timer()
+        total_sig_time += (end_time - start_time)
+
+        # decrypt messages
+        start_time = timer()
+        dec_msgs = decrypt(ctxt, signatures, ver_keys, used_key_indices, max_value)
+        # print("Decrypted messages:")
+        # print(dec_msgs)
+        end_time = timer()
+        total_dec_time += (end_time - start_time)
+
+    # convert to times from nanoseconds to milliseconds
+    setup_time = setup_time / 1_000_000
+    average_enc_time = total_enc_time / iterations / 1_000_000
+    average_sig_time = total_sig_time / iterations / 1_000_000
+    average_dec_time = total_dec_time / iterations / 1_000_000
+    print(f"Setup time: {setup_time:.3f} ms")
+    print(f"Average encryption time over {iterations} runs: {average_enc_time:.3f} ms")
+    print(f"Average signature generation time over {iterations} runs: {average_sig_time:.3f} ms")
+    print(f"Average decryption time over {iterations} runs: {average_dec_time:.3f} ms")
 
 
 if __name__ == "__main__":
