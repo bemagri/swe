@@ -37,7 +37,7 @@ def encrypt(
 
     :param threshold: Number of signatures required to decrypt.
     :param ver_keys: List of verification keys.
-    :param sign_messages: List of messages that need to be signed to allow decryption.
+    :param target_message: Messages that needs to be signed to allow decryption.
     :param messages: List of messages to encrypt. We require each message to be in [0, 2^msg_lengths) for some msg_lengths for decryption.
     :return: Ciphertext.
     """
@@ -73,9 +73,9 @@ def decrypt(
     Decrypt a SWE ciphertext.
 
     :param ctxt: SWE ciphertext.
-    :param signatures: List of signatures on target_message, where each signature is an aggregate signature for the same subset of verification keys.
+    :param aggr_signature: Aggregated signature on target_message from a subset of verification keys.
     :param ver_keys: List of all verification keys.
-    :used_vk_indices: Sorted list of indices of ver_keys used for the signatures.
+    :used_vk_indices: Sorted list of indices of ver_keys used for the signature.
     :param msg_lengths: Length of the messages such that each message is in [0, 2^msg_lengths).
     :return: List of messages.
     """
