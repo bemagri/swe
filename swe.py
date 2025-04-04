@@ -23,6 +23,16 @@ class Ciphertext(NamedTuple):
     a: list[pymcl.G2]
     t: list[pymcl.G1]
 
+# Define global variables to make them accessible to other functions
+BABY_STEPS_TABLE = None
+gt = None
+max_value = None
+
+def setup():
+    global BABY_STEPS_TABLE, gt, max_value
+    gt = pymcl.pairing(pymcl.g1, pymcl.g2)  # generator point of GT
+    max_value = 2**24  # Maximum value for discrete log
+    BABY_STEPS_TABLE = ecutils.build_baby_step_table(gt, max_value)
 
 def encrypt(
     dec_threshold: int,
@@ -77,7 +87,28 @@ def decrypt(
     :param msg_lengths: Length of the messages such that each message is in [0, 2^msg_lengths).
     :return: List of messages.
     """
-    return None
+
+    #if len(signatures) < dec_threshold:
+    #    raise ValueError("Not enough signatures to decrypt the message.")
+    
+    xi: list[pymcl.Fr] = [ecutils.hash_g2_to_fr(ver_keys[i]) for i in used_vk_indices] #iterate through used_vk_indices
+    lag_coeffs: list[pymcl.Fr] = [modbls.compute_li(xi, i) for i in range(len(used_vk_indices))]
+    c = pymcl.g2 - pymcl.g2  
+    for idx, i in enumerate(used_vk_indices):
+        c = c + (ctxt.c1[i] * lag_coeffs[idx]) #indexing lag_coeffs correctly
+
+    z: list[pymcl.GT] = [
+        ctxt.c2[i] * pymcl.pairing(signatures[i], ctxt.a[i]) / pymcl.pairing(ctxt.t[i], c)
+        for i in range(len(ctxt.c2))
+    ]
+     
+    msg: list[pymcl.Fr] = [ecutils.discrete_log(z[i], gt, BABY_STEPS_TABLE, max_value) for i in range(len(z))]
+
+    for i in range(len(msg)):
+        if msg[i] is None:
+            raise ValueError("Decryption failed.")
+
+    return msg
 
 
 def main():
@@ -87,7 +118,7 @@ def main():
     dec_threshold = 3  # number of keys required to sign messages to decrypt
 
     # Set some messages and signing messages
-    msgs = [pymcl.Fr("0"), pymcl.Fr("1"), pymcl.Fr("2"), pymcl.Fr("30000")]
+    msgs = [pymcl.Fr("123"), pymcl.Fr("456"), pymcl.Fr("789"), pymcl.Fr("30000")]
     sign_messages = ["msg1", "msg2", "msg3", "msg4"]
 
     # generate signing and verification keys
@@ -120,7 +151,8 @@ def main():
         signatures.append(aggregated_signature)
 
     # decrypt messages
-    dec_msgs = decrypt(ctxt, signatures, ver_keys, used_key_indices, msg_lengths)
+    setup() # Initialize the baby-step table and setup the global variables
+    dec_msgs = decrypt(ctxt, signatures, ver_keys, used_key_indices, max_value)
     print("Decrypted messages:")
     print(dec_msgs)
 
