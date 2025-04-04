@@ -49,3 +49,50 @@ def eval_polynomial(value: pymcl.Fr, coefficients: list[pymcl.Fr]) -> pymcl.Fr:
     for i, coeff in enumerate(coefficients):
         result += coeff * (pow_fr(value, i))
     return result
+
+def build_baby_step_table(base: pymcl.GT, max_value: int) -> dict:
+    """
+    Build the baby-step table for the baby-step-giant-step algorithm.
+
+    :param base: The base point in the elliptic curve group GT.
+    :param max_value: The maximum value for the discrete logarithm (e.g. 2**24).
+    :return: A dictionary representing the baby-step table.
+    """
+    import math
+
+    m = math.isqrt(max_value) + 1
+    baby_steps = {}
+    for j in range(m):
+        current = base ** pymcl.Fr(str(j))
+        baby_steps[current] = j
+    return baby_steps
+
+def discrete_log_in_gt(value: pymcl.GT, base: pymcl.GT, baby_steps: dict, max_value: int) -> pymcl.Fr:
+    """
+    Compute the discrete logarithm in an elliptic curve group using the baby-step-giant-step algorithm.
+
+    :param value: The point in the elliptic curve group GT to compute the dlog of.
+    :param base: The base point in the elliptic curve group G1.
+    :param modulus: The order of the elliptic curve group.
+    :param baby_steps: The precomputed baby-step table.
+    :return: The discrete logarithm x such that base * x = value.
+    """
+    import math
+
+    modulus = pymcl.r  # Order of the elliptic curve group
+
+    # Define the maximum value for the discrete log
+    m = math.isqrt(max_value) + 1
+
+    # Compute the giant-step factor
+    factor = base ** (pymcl.Fr(str(-m)))  # Negate and scale the base point
+
+    # Perform the giant steps
+    current = value
+    for i in range(m):
+        if current in baby_steps:
+            return i * m + baby_steps[current]
+        current *= factor  # Elliptic curve point addition
+
+    # If no solution is found
+    raise ValueError("Discrete logarithm not found within the range.")
