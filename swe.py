@@ -114,8 +114,9 @@ def main():
     total_dec_time = 0
 
     # Set some messages and signing messages
-    msgs = [pymcl.Fr("123"), pymcl.Fr("456"), pymcl.Fr("789"), pymcl.Fr("30000")]
     sign_messages = ["msg1", "msg2", "msg3", "msg4"]
+    message = "Hello, SWE!"
+    msgs = ecutils.message_to_pymcl_fr(message, msg_lengths)
 
     # Setup
     start_time = timer()
@@ -132,7 +133,7 @@ def main():
     end_time = timer()
     setup_time = (end_time - start_time)
 
-    iterations = 500
+    iterations = 1
     for _ in range(iterations):
         # encrypt messages
         start_time = timer()
@@ -168,8 +169,8 @@ def main():
         # decrypt messages
         start_time = timer()
         dec_msgs = decrypt(ctxt, signatures, ver_keys, used_key_indices, msg_lengths, baby_steps_table)
-        # print("Decrypted messages:")
-        # print(dec_msgs)
+        print("Decrypted messages:")
+        print(ecutils.pymcl_fr_to_message(dec_msgs, msg_lengths))
         end_time = timer()
         total_dec_time += (end_time - start_time)
 

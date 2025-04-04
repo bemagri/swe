@@ -101,3 +101,42 @@ def discrete_log(value: pymcl.GT, base: pymcl.GT, baby_steps: dict, max_value: i
 
     # If no solution is found
     raise ValueError("Discrete logarithm not found within the range.")
+
+
+def message_to_pymcl_fr(message: str, msg_lengths: int) -> list[pymcl.Fr]:
+    """
+    Convert a message to numbers and split it into pymcl.Fr elements of no more than msg_lengths bits.
+
+    :param message: The input message as a string.
+    :param msg_lengths: The maximum number of bits for each pymcl.Fr element.
+    :return: A list of pymcl.Fr elements.
+    """
+    # Convert the message to its byte representation
+    message_bytes = message.encode()
+    
+    # Split the bytes into chunks that fit into msg_lengths bits
+    chunk_size = msg_lengths // 8  # Convert bits to bytes
+    chunks = [message_bytes[i:i + chunk_size] for i in range(0, len(message_bytes), chunk_size)]
+
+    # Convert each chunk to a pymcl.Fr element
+    fr_elements = [pymcl.Fr(str(int.from_bytes(chunk, byteorder='big'))) for chunk in chunks]
+
+    return fr_elements
+
+
+def pymcl_fr_to_message(fr_elements: list[pymcl.Fr], msg_lengths: int) -> str:
+    """
+    Reconstruct a message string from a list of pymcl.Fr elements.
+
+    :param fr_elements: The list of pymcl.Fr elements.
+    :param msg_lengths: The maximum number of bits for each pymcl.Fr element.
+    :return: The reconstructed message as a string.
+    """
+    # Convert each pymcl.Fr element to an integer and then to bytes
+    chunk_size = msg_lengths // 8  # Convert bits to bytes
+    message_bytes = b''.join(
+        int(fr.__str__()).to_bytes(chunk_size, byteorder='big').lstrip(b'\x00') for fr in fr_elements
+    )
+
+    # Decode the bytes back to a string
+    return message_bytes.decode()

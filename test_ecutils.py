@@ -31,5 +31,56 @@ class TestECUtils(unittest.TestCase):
             invalid_value = self.base ** (pymcl.Fr(str(self.max_value)) + pymcl.Fr("9999999"))
             ecutils.discrete_log(invalid_value, self.base, self.baby_steps, self.max_value)
 
+    def test_message_to_pymcl_fr_valid(self):
+        # Test conversion of a message to pymcl.Fr elements
+        message = "Hello, world!"
+        msg_lengths = 128  # Maximum bits for each Fr element
+        fr_elements = ecutils.message_to_pymcl_fr(message, msg_lengths)
+        
+        # Verify the output is a list of pymcl.Fr elements
+        self.assertIsInstance(fr_elements, list)
+        self.assertTrue(all(isinstance(fr, pymcl.Fr) for fr in fr_elements))
+        
+        # Verify the reconstructed message matches the original
+        reconstructed_message = ecutils.pymcl_fr_to_message(fr_elements, msg_lengths)
+        self.assertEqual(reconstructed_message, message)
+
+    def test_message_to_pymcl_fr_empty_message(self):
+        # Test conversion of an empty message
+        message = ""
+        msg_lengths = 128
+        fr_elements = ecutils.message_to_pymcl_fr(message, msg_lengths)
+        
+        # Verify the output is an empty list
+        self.assertEqual(fr_elements, [])
+        
+        # Verify the reconstructed message is also empty
+        reconstructed_message = ecutils.pymcl_fr_to_message(fr_elements, msg_lengths)
+        self.assertEqual(reconstructed_message, message)
+
+    def test_message_to_pymcl_fr_large_message(self):
+        # Test conversion of a large message
+        message = "A" * 1000  # A long message
+        msg_lengths = 256
+        fr_elements = ecutils.message_to_pymcl_fr(message, msg_lengths)
+        
+        # Verify the output is a list of pymcl.Fr elements
+        self.assertIsInstance(fr_elements, list)
+        self.assertTrue(all(isinstance(fr, pymcl.Fr) for fr in fr_elements))
+        
+        # Verify the reconstructed message matches the original
+        reconstructed_message = ecutils.pymcl_fr_to_message(fr_elements, msg_lengths)
+        self.assertEqual(reconstructed_message, message)
+
+    def test_message_to_pymcl_fr_invalid_msg_lengths(self):
+        # Test invalid msg_lengths (e.g., too small to fit any character)
+        message = "Test"
+        msg_lengths = 4  # Too small to fit any character
+        with self.assertRaises(ValueError):
+            ecutils.message_to_pymcl_fr(message, msg_lengths)
+
+            
 if __name__ == "__main__":
     unittest.main()
+
+            
