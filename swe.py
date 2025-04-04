@@ -67,7 +67,7 @@ def decrypt(
     ver_keys: list[pymcl.G2],
     used_vk_indices: list[int],
     msg_lengths: int,
-    baby_steps_table: dict[int],
+    baby_steps_table: dict[int,pymcl.GT],
 ) -> list[pymcl.Fr]:
     """
     Decrypt a SWE ciphertext.
