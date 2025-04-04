@@ -67,7 +67,7 @@ def build_baby_step_table(base: pymcl.GT, max_value: int) -> dict:
         baby_steps[current] = j
     return baby_steps
 
-def discrete_log_in_gt(value: pymcl.GT, base: pymcl.GT, baby_steps: dict, max_value: int) -> pymcl.Fr:
+def discrete_log(value: pymcl.GT, base: pymcl.GT, baby_steps: dict, max_value: int) -> pymcl.Fr:
     """
     Compute the discrete logarithm in an elliptic curve group using the baby-step-giant-step algorithm.
 
@@ -90,8 +90,10 @@ def discrete_log_in_gt(value: pymcl.GT, base: pymcl.GT, baby_steps: dict, max_va
     # Perform the giant steps
     current = value
     for i in range(m):
+        #print(f"Current value at step {i}: {current}")
         if current in baby_steps:
-            return i * m + baby_steps[current]
+            #print(f"Match found: {current}")
+            return pymcl.Fr(str(i * m + baby_steps[current]))
         current *= factor  # Elliptic curve point addition
 
     # If no solution is found
