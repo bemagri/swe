@@ -28,7 +28,7 @@ class Ciphertext(NamedTuple):
 def encrypt(
     dec_threshold: int,
     ver_keys: list[pymcl.G2],
-    sign_messages: list[str],
+    target_message: str,
     messages: list[pymcl.Fr],
 ) -> Ciphertext:
     """
@@ -48,7 +48,7 @@ def encrypt(
     r: pymcl.Fr = pymcl.Fr.random()
     c: pymcl.Fr = pymcl.g2 * r
     a: list[pymcl.G2] =  [c * alpha[i] for i in range(len(messages))]
-    t: list[pymcl.G1] = [pymcl.G1.hash(sign_messages[i].encode())*alpha[i] for i in range(len(sign_messages))] 
+    t: list[pymcl.G1] = [pymcl.G1.hash(target_message.encode())*alpha[i] for i in range(len(messages))] 
     h: pymcl.G2 =  pymcl.g2 * pymcl.Fr.random()
     c0: pymcl.G2 = (h * r) + (pymcl.g2 * coefficients[0])
     c1: list[pymcl.G2] = [(ver_keys[i] * r) + (pymcl.g2 * s[i]) for i in range(len(ver_keys))]
@@ -63,7 +63,7 @@ def encrypt(
 
 def decrypt(
     ctxt: Ciphertext,
-    signatures: list[pymcl.G1],
+    aggr_signature: pymcl.G1,
     ver_keys: list[pymcl.G2],
     used_vk_indices: list[int],
     msg_lengths: int,
@@ -73,7 +73,7 @@ def decrypt(
     Decrypt a SWE ciphertext.
 
     :param ctxt: SWE ciphertext.
-    :param signatures: List of signatures on sign_messages, where each signature is an aggregate signature for the same subset of verification keys.
+    :param signatures: List of signatures on target_message, where each signature is an aggregate signature for the same subset of verification keys.
     :param ver_keys: List of all verification keys.
     :used_vk_indices: Sorted list of indices of ver_keys used for the signatures.
     :param msg_lengths: Length of the messages such that each message is in [0, 2^msg_lengths).
@@ -90,7 +90,7 @@ def decrypt(
         c = c + (ctxt.c1[i] * lag_coeffs[idx]) #indexing lag_coeffs correctly
 
     z: list[pymcl.GT] = [
-        ctxt.c2[i] * pymcl.pairing(signatures[i], ctxt.a[i]) / pymcl.pairing(ctxt.t[i], c)
+        ctxt.c2[i] * pymcl.pairing(aggr_signature, ctxt.a[i]) / pymcl.pairing(ctxt.t[i], c)
         for i in range(len(ctxt.c2))
     ]
     gt = pymcl.pairing(pymcl.g1, pymcl.g2)  # generator point of GT
@@ -114,8 +114,8 @@ def main():
     total_dec_time = 0
 
     # Set some messages and signing messages
-    sign_messages = ["msg1", "msg2", "msg3", "msg4"]
-    message = "Hello, SWE!"
+    target_message = "msg1"
+    message = "Hello, SWE! This is super cool! What size will this be?? goodbye!"
     msgs = ecutils.message_to_pymcl_fr(message, msg_lengths)
 
     # Setup
@@ -138,7 +138,7 @@ def main():
         # encrypt messages
         start_time = timer()
 
-        ctxt = encrypt(dec_threshold, ver_keys, sign_messages, msgs)
+        ctxt = encrypt(dec_threshold, ver_keys, target_message, msgs)
         # print("Ciphertext:")
         # pprint(dict(ctxt._asdict()))
 
@@ -152,23 +152,21 @@ def main():
 
         # every key in used_key_indices signs all messages in sign_messages
         start_time = timer()
-        signatures = []
-        for i in range(len(sign_messages)):
-            sigs = [
-                modbls.sign(sks[used_key_indices[j]], sign_messages[i])
-                for j in range(dec_threshold)
-            ]
-            # aggregate signatures
-            aggregated_signature = modbls.agg_sigs(
-                sigs, [ver_keys[used_key_indices[j]] for j in range(dec_threshold)]
-            )
-            signatures.append(aggregated_signature)
+
+        sigs = [modbls.sign(sks[used_key_indices[j]], target_message)
+            for j in range(dec_threshold) ]
+
+        # aggregate signatures
+        aggregated_signature = modbls.agg_sigs(
+            sigs, [ver_keys[used_key_indices[j]] for j in range(dec_threshold)]
+        )
+
         end_time = timer()
         total_sig_time += (end_time - start_time)
 
         # decrypt messages
         start_time = timer()
-        dec_msgs = decrypt(ctxt, signatures, ver_keys, used_key_indices, msg_lengths, baby_steps_table)
+        dec_msgs = decrypt(ctxt, aggregated_signature, ver_keys, used_key_indices, msg_lengths, baby_steps_table)
         print("Decrypted messages:")
         print(ecutils.pymcl_fr_to_message(dec_msgs, msg_lengths))
         end_time = timer()
