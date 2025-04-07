@@ -102,11 +102,122 @@ def decrypt(
 
     return msg
 
+def run_becnhamark():
+    # Print table with benchmark results
+    msg_lengths_list = [8, 16, 24]
+    num_keys_list = [5, 10, 15, 20]
+    dec_threshold_list = [3, 7, 11, 15]
+    message_lengths = [32, 64, 128]  # in bytes
+    iterations = 5
+
+    # Table to store results
+    table = PrettyTable()
+    table.field_names = [
+        "msg_lengths",
+        "num_keys",
+        "dec_threshold",
+        "message_length (bytes)",
+        "Setup Time (ms)",
+        "Enc Time (ms)",
+        "Sig Time (ms)",
+        "Dec Time (ms)",
+    ]
+
+    for msg_lengths in msg_lengths_list:
+        for num_keys in num_keys_list:
+            for dec_threshold in dec_threshold_list:
+                if dec_threshold > num_keys:
+                    continue  # Skip invalid configurations
+                for msg_len in message_lengths:
+                    total_enc_time = 0
+                    total_sig_time = 0
+                    total_dec_time = 0
+
+                    # Generate a random message of the specified length
+                    message = "A" * msg_len
+                    target_message = "target_msg"
+                    msgs = ecutils.message_to_pymcl_fr(message, msg_lengths)
+
+                    # Setup
+                    start_time = timer()
+
+                    gt = pymcl.pairing(pymcl.g1, pymcl.g2)  # generator point of GT
+                    baby_steps_table = ecutils.build_baby_step_table(gt, 2**msg_lengths)
+
+                    # Generate signing and verification keys
+                    modbls_keys = [modbls.key_gen() for _ in range(num_keys)]
+                    sks, ver_keys = zip(*modbls_keys)
+                    sks = list(sks)
+                    ver_keys = list(ver_keys)
+
+                    end_time = timer()
+                    setup_time = (end_time - start_time)
+
+                    for _ in range(iterations):
+                        # Encrypt messages
+                        start_time = timer()
+                        ctxt = encrypt(dec_threshold, ver_keys, target_message, msgs)
+                        end_time = timer()
+                        total_enc_time += (end_time - start_time)
+
+                        # Sample a random subset of size threshold of keys to use for signing
+                        used_key_indices = sorted(random.sample(range(num_keys), dec_threshold))
+
+                        # Every key in used_key_indices signs the target message
+                        start_time = timer()
+                        sigs = [
+                            modbls.sign(sks[used_key_indices[j]], target_message)
+                            for j in range(dec_threshold)
+                        ]
+
+                        # Aggregate signatures
+                        aggregated_signature = modbls.agg_sigs(
+                            sigs, [ver_keys[used_key_indices[j]] for j in range(dec_threshold)]
+                        )
+                        end_time = timer()
+                        total_sig_time += (end_time - start_time)
+
+                        # Decrypt messages
+                        start_time = timer()
+                        dec_msgs = decrypt(
+                            ctxt,
+                            aggregated_signature,
+                            ver_keys,
+                            used_key_indices,
+                            msg_lengths,
+                            baby_steps_table,
+                        )
+                        end_time = timer()
+                        total_dec_time += (end_time - start_time)
+
+                    # Convert times from nanoseconds to milliseconds
+                    setup_time = setup_time / 1_000_000
+                    average_enc_time = total_enc_time / iterations / 1_000_000
+                    average_sig_time = total_sig_time / iterations / 1_000_000
+                    average_dec_time = total_dec_time / iterations / 1_000_000
+
+                    # Add results to the table
+                    table.add_row(
+                        [
+                            msg_lengths,
+                            num_keys,
+                            dec_threshold,
+                            msg_len,
+                            f"{setup_time:.3f}",
+                            f"{average_enc_time:.3f}",
+                            f"{average_sig_time:.3f}",
+                            f"{average_dec_time:.3f}",
+                        ]
+                    )
+
+    # Print the results table
+    print(table)
+
 
 def main():
     # set global parameters
     msg_lengths = 24
-    num_keys = 4
+    num_keys = 5
     dec_threshold = 3  # number of keys required to sign messages to decrypt
 
     total_enc_time = 0
@@ -115,7 +226,7 @@ def main():
 
     # Set some messages and signing messages
     target_message = "msg1"
-    message = "Hello, SWE! This is super cool! What size will this be?? goodbye!"
+    message = "The quick brown fox jumped over the lazy dog. Hello SWE!!! This is a test message."
     msgs = ecutils.message_to_pymcl_fr(message, msg_lengths)
 
     # Setup
@@ -133,7 +244,7 @@ def main():
     end_time = timer()
     setup_time = (end_time - start_time)
 
-    iterations = 1
+    iterations = 10
     for _ in range(iterations):
         # encrypt messages
         start_time = timer()
@@ -167,10 +278,13 @@ def main():
         # decrypt messages
         start_time = timer()
         dec_msgs = decrypt(ctxt, aggregated_signature, ver_keys, used_key_indices, msg_lengths, baby_steps_table)
-        print("Decrypted messages:")
-        print(ecutils.pymcl_fr_to_message(dec_msgs, msg_lengths))
+
         end_time = timer()
         total_dec_time += (end_time - start_time)
+
+    dec_msg = ecutils.pymcl_fr_to_message(dec_msgs, msg_lengths)
+    print("Decrypted message:", dec_msg)
+    print("Message size: " + str(len(dec_msg)) + " bytes")
 
     # convert to times from nanoseconds to milliseconds
     setup_time = setup_time / 1_000_000
