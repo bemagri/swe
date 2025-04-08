@@ -11,7 +11,7 @@ import pymcl
 import ecutils
 import modbls
 from time import perf_counter_ns as timer
-
+from prettytable import *
 
 class Ciphertext(NamedTuple):
     """Ciphertext of SWE scheme."""
@@ -102,9 +102,9 @@ def decrypt(
 
     return msg
 
-def run_becnhamark():
+def run_benchmark():
     # Print table with benchmark results
-    msg_lengths_list = [8, 16, 24]
+    msg_lengths_list = [16, 24]
     num_keys_list = [5, 10, 15, 20]
     dec_threshold_list = [3, 7, 11, 15]
     message_lengths = [32, 64, 128]  # in bytes
@@ -298,4 +298,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    #main()
+    run_benchmark()
