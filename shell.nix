@@ -86,6 +86,7 @@ shellHook = ''
 
     export CC=${pkgs.clang}/bin/clang
     export CXX=${pkgs.clang}/bin/clang++
+    pip install prettytable
     pip install ./pymcl-install
     echo "[venv] ✅ pymcl installed"
   else
