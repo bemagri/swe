@@ -63,7 +63,7 @@ def build_baby_step_table(base: pymcl.GT, max_value: int) -> dict[int,pymcl.GT]:
     :param max_value: The maximum value for the discrete logarithm (e.g. 2**24).
     :return: A dictionary representing the baby-step table.
     """
-
+    #m = max_value
     m = math.isqrt(max_value) + 1
     baby_steps = {}
     current = base / base # neutral element
